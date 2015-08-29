@@ -6,6 +6,8 @@
 #include <QRunnable>
 #include <QList>
 #include <QMap>
+#include <QSharedPointer>
+#include "handle.h"
 
 
 class CabException {
@@ -14,9 +16,28 @@ public:
   QString reason;
 };
 
+class Cabinet {
+public:
+  Cabinet(QString base);
+  void seek(int volume, int index, int offset, bool obfuscated);
+  QByteArray read(int len);
+private:
+  void open();
+  qint32 firstIndex, lastIndex;
+  qint64 firstOffset, lastOffset;
+  qint64 firstSize, lastSize;
+  qint64 firstCompressed, lastCompressed;
+  QString base;
+  int curIndex;
+  int curVolume;
+  bool unobfuscate;
+  qint64 end;
+  quint8 obOffs;
+  QSharedPointer<Handle> handle;
+};
+
 class Cab : public QObject, public QRunnable {
   Q_OBJECT
-
 
   class File {
   public:
@@ -26,7 +47,7 @@ class Cab : public QObject, public QRunnable {
     qint64 size;
     qint64 compressed;
     qint64 offset;
-    quint8 md5[0x10];
+    qint8 md5[0x10];
     quint32 previous, next;
     quint8 link;
     quint16 volume;
@@ -58,7 +79,7 @@ public:
   virtual ~Cab();
 
 signals:
-  void progress(int percent);
+  void progress(QString message, int percent);
   void error(QString err);
   void finished();
 
@@ -69,6 +90,7 @@ private:
   void extractFile(int index, QString filename);
   QString source, dest;
   Header header;
+  Cabinet cab;
 };
 
 #endif // CAB_H

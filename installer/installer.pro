@@ -6,6 +6,7 @@ TARGET = installer
 TEMPLATE = app
 
 unix:QMAKE_CXXFLAGS += -std=c++11
+unix:LIBS += -lz
 
 SOURCES += main.cpp\
         mainwindow.cpp \

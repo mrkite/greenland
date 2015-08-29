@@ -21,6 +21,7 @@ private slots:
   void chooseDest();
   void install();
   void done();
+  void update(QString msg, int percent);
   void showError(QString err);
 
 private:

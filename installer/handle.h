@@ -16,6 +16,7 @@ public:
   quint16 r16();
   quint32 r32();
   quint64 r64();
+  const char *read(int len);
   const char *rs();
   const ushort *rs16();
   void skip(int len);

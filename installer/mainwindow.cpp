@@ -52,12 +52,17 @@ void MainWindow::install() {
             this, SLOT(showError(QString)));
     connect(cab, SIGNAL(finished()),
             this, SLOT(done()));
-    connect(cab, SIGNAL(progress(int)),
-            progress, SLOT(setValue(int)));
+    connect(cab, SIGNAL(progress(QString,int)),
+            this, SLOT(update(QString,int)));
     QThreadPool::globalInstance()->start(cab);
   } catch (CabException e) {
     showError(e.reason);
   }
+}
+
+void MainWindow::update(QString msg, int percent) {
+  progress->setValue(percent);
+  progress->setLabelText(msg);
 }
 
 void MainWindow::showError(QString err) {

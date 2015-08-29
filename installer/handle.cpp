@@ -52,6 +52,12 @@ quint64 Handle::r64() {
   return r;
 }
 
+const char *Handle::read(int len) {
+  int oldpos = pos;
+  pos += len;
+  return (const char *)data + oldpos;
+}
+
 const char *Handle::rs() {
   return (const char *)data + pos;
 }
