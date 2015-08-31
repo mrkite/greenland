@@ -61,7 +61,7 @@ class Cab : public QObject, public QRunnable {
 
   class Component {
   public:
-    QString name;
+    QString name, dest;
     QList<QString> groups;
   };
 

@@ -11,10 +11,12 @@ unix:LIBS += -lz
 SOURCES += main.cpp\
         mainwindow.cpp \
     handle.cpp \
-    cab.cpp
+    cab.cpp \
+    opcodes.cpp
 
 HEADERS  += mainwindow.h \
     handle.h \
-    cab.h
+    cab.h \
+    opcodes.h
 
 FORMS    += mainwindow.ui

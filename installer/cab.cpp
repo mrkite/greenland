@@ -25,13 +25,19 @@ void Cab::run() {
           Group &g = header.groups[group];
           for (int i = g.first; i <= g.last; i++) {
             if (i < header.files.length()) {
-              QString filepath = QString("%1/%2/%3")
-                  .arg(g.dest)
-                  .arg(header.files[i].directory)
-                  .arg(header.files[i].name);
-              if (!filepath.contains("<TARGETDIR>"))
+
+              // convert all files to lowercase.
+              // make sure we don't do the same on dest, since that was
+              // a user-supplied folder
+
+              QString filepath = QString("%1/%2/%3/%4")
+                  .arg(comp.dest.toLower())
+                  .arg(g.dest.toLower())
+                  .arg(header.files[i].directory.toLower())
+                  .arg(header.files[i].name.toLower());
+              if (!filepath.contains("<targetdir>"))
                 continue;
-              filepath.replace(QRegExp("<TARGETDIR>"), dest);
+              filepath.replace(QRegExp("<targetdir>"), dest);
               filepath.replace(QRegExp("\\\\"), "/");
               filepath.replace(QRegExp("//+"), "/");
 
@@ -195,9 +201,14 @@ Cab::Header::Header(QString path) {
 
       handle.seek(base + desc);
       quint32 name = handle.r32();
-      handle.skip(0x6b);
-      if (version == 0 || version == 5)
-        handle.skip(1);
+      quint32 destfolder = 0;
+
+      if (version == 0 || version == 5) {
+        handle.skip(0x18);
+        destfolder = handle.r32();
+        handle.skip(0x50);
+      } else
+        handle.skip(0x6b);
       quint16 numGroups = handle.r16();
       quint32 gOff = handle.r32();
       Component comp;
@@ -206,6 +217,15 @@ Cab::Header::Header(QString path) {
         comp.name = QString::fromUtf16(handle.rs16());
       else
         comp.name = QString::fromUtf8(handle.rs());
+
+      if (destfolder) {
+        handle.seek(base + destfolder);
+        if (version >= 17)
+          comp.dest = QString::fromUtf16(handle.rs16());
+        else
+          comp.dest = QString::fromUtf8(handle.rs());
+      }
+
       for (int i = 0; i < numGroups; i++) {
         handle.seek(base + gOff + i * 4);
         handle.seek(base + handle.r32());
@@ -227,31 +247,41 @@ Cab::Header::Header(QString path) {
       handle.seek(base + desc);
       quint32 name = handle.r32();
       handle.skip(0x12);
+
       if (version == 0 || version == 5)
         handle.skip(0x36);
       Group group;
       group.first = handle.r32();
       group.last = handle.r32();
 
-      quint32 sourcefolder = handle.r32();
-      handle.skip(0x18); //unused strings
-      quint32 destfolder = handle.r32();
+      quint32 sourcefolder = 0;
+      quint32 destfolder = 0;
+
+      if (version != 5) {
+        sourcefolder = handle.r32();
+        handle.skip(0x18); //unused strings
+        destfolder = handle.r32();
+      }
 
       handle.seek(base + name);
       if (version >= 17)
         group.name = QString::fromUtf16(handle.rs16());
       else
         group.name = QString::fromUtf8(handle.rs());
-      handle.seek(base + sourcefolder);
-      if (version >= 17)
-        group.source = QString::fromUtf16(handle.rs16());
-      else
-        group.source = QString::fromUtf8(handle.rs());
-      handle.seek(base + destfolder);
-      if (version >= 17)
-        group.dest = QString::fromUtf16(handle.rs16());
-      else
-        group.dest = QString::fromUtf8(handle.rs());
+      if (sourcefolder) {
+        handle.seek(base + sourcefolder);
+        if (version >= 17)
+          group.source = QString::fromUtf16(handle.rs16());
+        else
+          group.source = QString::fromUtf8(handle.rs());
+      }
+      if (destfolder) {
+        handle.seek(base + destfolder);
+        if (version >= 17)
+          group.dest = QString::fromUtf16(handle.rs16());
+        else
+          group.dest = QString::fromUtf8(handle.rs());
+      }
       groups.insert(group.name, group);
     }
   }
@@ -315,7 +345,7 @@ void Cabinet::seek(int volume, int index, int offset, bool obfuscated) {
     curVolume = volume;
     open();
   }
-  if (index == lastIndex) {
+  if (index == lastIndex && lastCompressed != 0) {
     end = lastCompressed;
     handle->seek(lastOffset);
   } else {
