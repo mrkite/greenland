@@ -21,7 +21,8 @@ SOURCES += main.cpp\
     bif.cpp \
     unk.cpp \
     bam.cpp \
-    mos.cpp
+    mos.cpp \
+    mve.cpp
 
 HEADERS  += mainwindow.h \
     handle.h \
@@ -30,6 +31,7 @@ HEADERS  += mainwindow.h \
     bif.h \
     unk.h \
     bam.h \
-    mos.h
+    mos.h \
+    mve.h
 
 FORMS    += mainwindow.ui

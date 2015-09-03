@@ -10,6 +10,7 @@
 #include "bmp.h"
 #include "bam.h"
 #include "mos.h"
+#include "mve.h"
 
 template <typename T>
 static QWidget *createView(QSharedPointer<Handle> handle, QWidget *parent = 0) {
@@ -25,7 +26,7 @@ struct {
   catFunc *func;
 } categories[] = {
 {0x001, "bmp", "Bitmaps", createView<BMP>},
-{0x002, "mve", "Movies", createView<UNK>},
+{0x002, "mve", "Movies", createView<MVE>},
 {0x004, "wav", "Audio", createView<UNK>},
 {0x005, "wfx", "Wave FX", createView<UNK>},
 {0x006, "plt", "Paper Dolls", createView<UNK>},
