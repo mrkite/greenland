@@ -80,8 +80,8 @@ BAM::BAM(QSharedPointer<Handle> handle, QWidget *parent) : QWidget(parent) {
         handle->seek(frameOfs + num * 12);
         frame.width = handle->r16();
         frame.height = handle->r16();
-        frame.x = handle->r16();
-        frame.y = handle->r16();
+        frame.x = (qint16)handle->r16();
+        frame.y = (qint16)handle->r16();
         quint32 foffs = handle->r32();
         if (f == 0) {
           minX = minY = 0;
@@ -183,24 +183,90 @@ BAM::BAM(QSharedPointer<Handle> handle, QWidget *parent) : QWidget(parent) {
   curCycle = 0;
   QSpinBox *spinner = new QSpinBox(this);
   spinner->setMinimum(0);
-  spinner->setMaximum(cycles.count());
+  spinner->setMaximum(cycles.count() - 1);
+  connect(spinner, SIGNAL(valueChanged(int)),
+          this, SLOT(changeCycle(int)));
   buttons->addWidget(spinner);
+
+  buttons->addWidget(new QLabel(tr("Frame:")));
+  frameNo = new QLabel("0");
+  buttons->addWidget(frameNo);
 
   QPushButton *prev = new QPushButton(this);
   prev->setIcon(style()->standardIcon(QStyle::SP_MediaSeekBackward));
+  connect(prev, SIGNAL(clicked()),
+          this, SLOT(goPrev()));
   buttons->addWidget(prev);
   QPushButton *play = new QPushButton(this);
   play->setIcon(style()->standardIcon(QStyle::SP_MediaPlay));
+  connect(play, SIGNAL(clicked()),
+          this, SLOT(play()));
   buttons->addWidget(play);
   QPushButton *next = new QPushButton(this);
   next->setIcon(style()->standardIcon(QStyle::SP_MediaSeekForward));
+  connect(next, SIGNAL(clicked()),
+          this, SLOT(goNext()));
   buttons->addWidget(next);
 
   view = new QLabel(this);
   Cycle const &c = cycles[curCycle];
-  view->setPixmap(QPixmap::fromImage(*c.frames[c.frame].image));
+  view->resize(c.width, c.height);
   QScrollArea *sa = new QScrollArea(this);
-  sa->setWidgetResizable(true);
   sa->setWidget(view);
   layout->addWidget(sa, 1);
+  update();
+
+  connect(&timer, SIGNAL(timeout()),
+          this, SLOT(tick()));
+}
+
+void BAM::changeCycle(int cycle) {
+  curCycle = cycle;
+  Cycle const &c = cycles[cycle];
+  view->resize(c.width, c.height);
+  update();
+}
+
+void BAM::goPrev() {
+  timer.stop();
+  Cycle &c = cycles[curCycle];
+  c.frame--;
+  if (c.frame < 0)
+    c.frame = c.frames.count() - 1;
+
+  update();
+}
+
+void BAM::goNext() {
+  timer.stop();
+  Cycle &c = cycles[curCycle];
+  c.frame++;
+  if (c.frame >= c.frames.count())
+    c.frame = 0;
+
+  update();
+}
+
+void BAM::tick() {
+  Cycle &c = cycles[curCycle];
+  c.frame++;
+  if (c.frame >= c.frames.count())
+    c.frame = 0;
+
+  update();
+}
+
+void BAM::play() {
+  if (timer.isActive())
+    timer.stop();
+  else
+    timer.start(150);
+}
+
+void BAM::update() {
+  Cycle const &c = cycles[curCycle];
+  frameNo->setText(QString("%1").arg(c.frame));
+  Frame const &f = c.frames[c.frame];
+  view->setPixmap(QPixmap::fromImage(*f.image));
+  view->setContentsMargins(f.x, f.y, 0, 0);
 }

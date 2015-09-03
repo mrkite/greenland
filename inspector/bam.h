@@ -5,6 +5,7 @@
 #include <QList>
 #include <QImage>
 #include <QLabel>
+#include <QTimer>
 #include "handle.h"
 
 struct Frame {
@@ -25,10 +26,20 @@ class BAM : public QWidget {
 public:
   BAM(QSharedPointer<Handle> handle, QWidget *parent = 0);
 
+private slots:
+  void changeCycle(int cycle);
+  void goPrev();
+  void goNext();
+  void play();
+  void tick();
+
 private:
+  void update();
   quint8 curCycle;
+  QLabel *frameNo;
   QLabel *view;
   QList<Cycle> cycles;
+  QTimer timer;
 };
 
 #endif // BAM_H

@@ -9,6 +9,7 @@
 #include "unk.h"
 #include "bmp.h"
 #include "bam.h"
+#include "mos.h"
 
 template <typename T>
 static QWidget *createView(QSharedPointer<Handle> handle, QWidget *parent = 0) {
@@ -32,7 +33,7 @@ struct {
 {0x3e9, "wed", "Maps", createView<UNK>},
 {0x3ea, "chu", "Controls", createView<UNK>},
 {0x3eb, "tis", "Tiles", createView<UNK>},
-{0x3ec, "mos", "GUIs", createView<UNK>},
+{0x3ec, "mos", "GUIs", createView<MOS>},
 {0x3ed, "itm", "Items", createView<UNK>},
 {0x3ee, "spl", "Spells", createView<UNK>},
 {0x3ef, "bcs", "Compiled Scripts", createView<UNK>},
@@ -157,7 +158,7 @@ void MainWindow::loadKey(QString filename) {
     res.tileset = (locator >> 14) & 0x3f;
     res.index = locator & 0x3fff;
     resources.append(res);
-    QString type;
+    QString type = "unknown";
     for (int c = 0; categories[c].name != NULL; c++) {
       if (categories[c].type == res.type) {
         type = categories[c].name;
