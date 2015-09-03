@@ -1,41 +1,53 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include "handle.h"
+#include "bif.h"
 #include <QFileDialog>
 #include <QSettings>
 #include <QMessageBox>
 #include <QDebug>
+#include "unk.h"
+#include "bmp.h"
+#include "bam.h"
+
+template <typename T>
+static QWidget *createView(QSharedPointer<Handle> handle, QWidget *parent = 0) {
+  return new T(handle, parent);
+}
+
+typedef QWidget *(catFunc)(QSharedPointer<Handle> handle, QWidget *parent);
 
 struct {
   quint16 type;
   const char *extension;
   const char *name;
+  catFunc *func;
 } categories[] = {
-{0x001, "bmp", "Bitmaps"},
-{0x002, "mve", "Movies"},
-{0x004, "wav", "Audio"},
-{0x005, "wfx", "Wave FX"},
-{0x006, "plt", "Paper Dolls"},
-{0x3e8, "bam", "Animations"},
-{0x3e9, "wed", "Maps"},
-{0x3ea, "chu", "Controls"},
-{0x3eb, "tis", "Tiles"},
-{0x3ec, "mos", "GUIs"},
-{0x3ed, "itm", "Items"},
-{0x3ee, "spl", "Spells"},
-{0x3ef, "bcs", "Compiled Scripts"},
-{0x3f0, "ids", "IDs"},
-{0x3f1, "cre", "Creatures"},
-{0x3f2, "are", "Areas"},
-{0x3f3, "dlg", "Dialogs"},
-{0x3f4, "2da", "Rulesets"},
-{0x3f5, "gam", "Save games"},
-{0x3f6, "sto", "Stores"},
-{0x3f7, "wmp", "World maps"},
-{0x3f8, "eff", "Effects"},
-{0x3fb, "vvc", "Spell Effects"},
-{0x3fd, "pro", "Projectiles"},
-{0x000, NULL}
+{0x001, "bmp", "Bitmaps", createView<BMP>},
+{0x002, "mve", "Movies", createView<UNK>},
+{0x004, "wav", "Audio", createView<UNK>},
+{0x005, "wfx", "Wave FX", createView<UNK>},
+{0x006, "plt", "Paper Dolls", createView<UNK>},
+{0x3e8, "bam", "Animations", createView<BAM>},
+{0x3e9, "wed", "Maps", createView<UNK>},
+{0x3ea, "chu", "Controls", createView<UNK>},
+{0x3eb, "tis", "Tiles", createView<UNK>},
+{0x3ec, "mos", "GUIs", createView<UNK>},
+{0x3ed, "itm", "Items", createView<UNK>},
+{0x3ee, "spl", "Spells", createView<UNK>},
+{0x3ef, "bcs", "Compiled Scripts", createView<UNK>},
+{0x3f0, "ids", "IDs", createView<UNK>},
+{0x3f1, "cre", "Creatures", createView<UNK>},
+{0x3f2, "are", "Areas",createView<UNK>},
+{0x3f3, "dlg", "Dialogs", createView<UNK>},
+{0x3f4, "2da", "Rulesets", createView<UNK>},
+{0x3f5, "gam", "Save games", createView<UNK>},
+{0x3f6, "sto", "Stores", createView<UNK>},
+{0x3f7, "wmp", "World maps", createView<UNK>},
+{0x3f8, "eff", "Effects", createView<UNK>},
+{0x3fb, "vvc", "Spell Effects", createView<UNK>},
+{0x3fd, "pro", "Projectiles", createView<UNK>},
+{0x000, NULL, NULL, NULL}
 };
 
 MainWindow::MainWindow(QWidget *parent) :
@@ -66,6 +78,37 @@ void MainWindow::open() {
       loadKey(filename);
     } catch (FileError e) {
       QMessageBox::warning(this, tr("Failed to load chitin.key"), e.reason);
+    }
+  }
+}
+
+void MainWindow::keySelected() {
+  auto item = ui->treeWidget->selectedItems().first();
+  int id = item->data(0, Qt::UserRole).toInt();
+
+  if (id >= 0) {
+    try {
+      QWidget *w = NULL;
+      Resource &res = resources[id];
+
+      QString path = bifs[res.bif];
+      QDir dir(root);
+      BIF bif(dir.absoluteFilePath(path));
+
+      auto handle = bif.get(res.tileset, res.index);
+
+      for (int c = 0; categories[c].name != NULL; c++) {
+        if (categories[c].type == res.type) {
+          w = categories[c].func(handle, ui->view);
+          break;
+        }
+      }
+      if (w != NULL)
+        ui->view->setWidget(w);
+      else
+        ui->view->setWidget(createView<UNK>(handle, ui->view));
+    } catch (FileError e) {
+      QMessageBox::warning(this, tr("Failed to load BIF"), e.reason);
     }
   }
 }
@@ -102,6 +145,8 @@ void MainWindow::loadKey(QString filename) {
     bifs.append(path.toLower());
   }
 
+  QHash<QString, QTreeWidgetItem *> parents;
+
   handle->seek(resOfs);
   for (int i = 0; i < numResources; i++) {
     Resource res;
@@ -119,7 +164,23 @@ void MainWindow::loadKey(QString filename) {
         break;
       }
     }
-    if (type.isEmpty())
-      qDebug() << res.name << "." << res.type;
+
+    if (!parents.contains(type)) {
+      QStringList row;
+      row << type;
+      QTreeWidgetItem *p = new QTreeWidgetItem(row);
+      p->setData(0, Qt::UserRole, -1);
+      ui->treeWidget->addTopLevelItem(p);
+      parents[type] = p;
+    }
+
+    QStringList row;
+    row << res.name;
+    QTreeWidgetItem *c = new QTreeWidgetItem(parents[type], row);
+    c->setData(0, Qt::UserRole, i);
+    parents[type]->addChild(c);
   }
+
+  ui->treeWidget->sortItems(1, Qt::AscendingOrder);
+  ui->treeWidget->sortItems(0, Qt::AscendingOrder);
 }

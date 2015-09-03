@@ -32,6 +32,7 @@ public:
 
 private slots:
   void open();
+  void keySelected();
 
 private:
   void loadKey(QString filename);
