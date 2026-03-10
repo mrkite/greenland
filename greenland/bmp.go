@@ -24,21 +24,23 @@ func NewBMP(res *File) ResView {
 	}
 	res.Seek(10)
 	ofs := res.R32()
-	res.Skip(4) // unknown
+	size := res.R32()
 	w := res.R32()
 	h := res.R32()
 	res.Skip(2) // planes
 	bpp := res.R16()
 	res.Skip(4) // compression
 
-	colors := make([]byte, 4*(1<<bpp))
+	colors := []byte{}
 	if bpp == 4 || bpp == 8 {
-		res.Seek(54)
+		colors = make([]byte, 4*(1<<bpp))
+		res.Seek(14 + size)
 		for i := range 1 << bpp {
 			colors[i*4+2] = byte(res.R8()) // b
 			colors[i*4+1] = byte(res.R8()) // g
 			colors[i*4+0] = byte(res.R8()) // r
-			colors[i*4+3] = byte(res.R8()) // a
+			colors[i*4+3] = 0xff           //byte(res.R8()) // a
+
 		}
 	}
 	img := image.NewRGBA(image.Rect(0, 0, w, h))
@@ -72,6 +74,13 @@ func NewBMP(res *File) ResView {
 				img.Pix[out+1] = colors[c*4+1]
 				img.Pix[out+2] = colors[c*4+2]
 				img.Pix[out+3] = colors[c*4+3]
+				out += 4
+			case 32:
+				px += 4
+				img.Pix[out+2] = byte(res.R8())
+				img.Pix[out+1] = byte(res.R8())
+				img.Pix[out] = byte(res.R8())
+				img.Pix[out+3] = byte(res.R8())
 				out += 4
 			default:
 				px += 3

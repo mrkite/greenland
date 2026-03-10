@@ -75,8 +75,8 @@ func (c *Chitin) Load(data []byte, root string) error {
 		if (location & 0x8) != 0 {
 			path = "cd2"
 		}
-		name := strings.Replace(file.Rs(nameLen-1), "\\", "/", -1)
-		path = strings.ToLower(filepath.Join(root, path, name))
+		name := strings.ReplaceAll(file.Rs(nameLen-1), "\\", "/")
+		path = filepath.Join(root, path, name)
 		// check if cd-based path exists:
 		if _, err := os.Stat(path); os.IsNotExist(err) {
 			path = strings.ToLower(filepath.Join(root, name))
